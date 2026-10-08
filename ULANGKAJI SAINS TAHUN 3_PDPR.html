@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ulangkaji Sains Tahun 3</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Canvas Confetti CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Font Google -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Fredoka', 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #fef08a 100%);
+            min-height: 100vh;
+        }
+
+        /* Animasi Skrin Bergegar untuk Jawapan Salah */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-12px); }
+            40%, 80% { transform: translateX(12px); }
+        }
+        .shake-animation {
+            animation: shake 0.4s ease-in-out;
+        }
+
+        /* PERBAIKAN KHAS UNTUK CETAKAN & SIMPAN PDF */
+        @media print {
+            body {
+                background: white !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            /* Sembunyikan semua elemen lain kecuali Sijil */
+            .no-print, #start-screen, #quiz-screen, #result-screen, button, header {
+                display: none !important;
+            }
+            #certificate-modal {
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                background: white !important;
+                display: flex !important;
+                justify-content: center !important;
+                align-items: center !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .cert-box {
+                border: 8px solid #0284c7 !important;
+                box-shadow: none !important;
+                width: 100% !important;
+                max-width: 900px !important;
+                page-break-inside: avoid;
+            }
+            @page {
+                size: A4 landscape;
+                margin: 1cm;
+            }
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-between p-4 min-h-screen text-slate-800">
+
+    <!-- HEADER / TAJUK -->
+    <header class="text-center my-4 no-print">
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-sky-700 tracking-wide drop-shadow-md">
+            🧪 ULANGKAJI SAINS TAHUN 3 🚀
+        </h1>
+        <p class="text-slate-600 font-semibold mt-1">Ketumpatan • Asid & Alkali • Sistem Suria • Takal</p>
+    </header>
+
+    <main class="w-full max-w-2xl bg-white/90 backdrop-blur-md rounded-3xl shadow-xl border-4 border-sky-300 p-6 sm:p-8 relative overflow-hidden my-auto">
+        
+        <!-- 1. SKRIN PERMULAAN -->
+        <section id="start-screen" class="space-y-6 text-center">
+            <div class="bg-sky-50 border-2 border-sky-200 p-4 rounded-2xl">
+                <h2 class="text-xl font-bold text-sky-800 mb-2">📋 Arahan Ringkas:</h2>
+                <ul class="text-left text-slate-700 text-sm sm:text-base space-y-2 list-disc list-inside">
+                    <li>Mempunyai <b>30 soalan</b> aneka pilihan.</li>
+                    <li>Pemasa <b>30 saat</b> bagi setiap soalan.</li>
+                    <li>Masa <= 5 saat, paparan bertukar kemerahan!</li>
+                    <li>Skor <b>60% ke atas (18/30)</b> akan mendapat <b>Sijil Penghargaan</b>! 📜</li>
+                </ul>
+            </div>
+
+            <form id="user-form" onsubmit="event.preventDefault(); startQuiz();" class="space-y-4">
+                <div>
+                    <label class="block text-left font-bold text-slate-700 mb-1" for="user-name">Nama Murid: *</label>
+                    <input type="text" id="user-name" required placeholder="Masukkan Nama Penuh" oninput="validateInput()"
+                        class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-sky-500 focus:outline-none font-semibold text-lg">
+                </div>
+                <div>
+                    <label class="block text-left font-bold text-slate-700 mb-1" for="user-class">Kelas: *</label>
+                    <input type="text" id="user-class" required placeholder="Contoh: 3 Cemerlang" oninput="validateInput()"
+                        class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-sky-500 focus:outline-none font-semibold text-lg">
+                </div>
+
+                <button id="btn-start" type="submit" disabled
+                    class="w-full py-4 bg-slate-300 text-slate-500 font-extrabold text-xl rounded-2xl shadow-lg transition-all cursor-not-allowed">
+                    🚀 MULA KUIZ
+                </button>
+            </form>
+        </section>
+
+        <!-- 2. SKRIN KUIZ -->
+        <section id="quiz-screen" class="hidden space-y-6">
+            <!-- Header Kuiz (Kemajuan & Pemasa) -->
+            <div class="flex justify-between items-center border-b-2 border-slate-100 pb-3">
+                <span id="progress-text" class="font-bold text-sky-700 text-lg">Soalan 1 / 30</span>
+                <div id="timer-box" class="flex items-center space-x-1 px-4 py-1.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-lg transition-colors">
+                    <span>⏱️</span>
+                    <span id="timer-text">30s</span>
+                </div>
+            </div>
+
+            <!-- Bar Kemajuan -->
+            <div class="w-full bg-slate-200 h-3 rounded-full overflow-hidden">
+                <div id="progress-bar" class="bg-sky-500 h-full w-0 transition-all duration-300"></div>
+            </div>
+
+            <!-- Soalan -->
+            <div>
+                <span id="question-category" class="inline-block bg-amber-100 text-amber-800 text-xs font-bold px-3 py-1 rounded-full mb-2">Topik</span>
+                <h3 id="question-text" class="text-xl sm:text-2xl font-bold text-slate-800 leading-snug">
+                    Teks soalan akan muncul di sini?
+                </h3>
+            </div>
+
+            <!-- Pilihan Jawapan -->
+            <div id="options-container" class="grid grid-cols-1 gap-3">
+                <!-- Butang jawapan dijana oleh JS -->
+            </div>
+
+            <!-- Maklum Balas Ringkas -->
+            <div id="feedback-message" class="hidden text-center p-3 rounded-xl font-bold text-lg"></div>
+        </section>
+
+        <!-- 3. SKRIN KEPUTUSAN -->
+        <section id="result-screen" class="hidden space-y-6 text-center">
+            <div class="bg-sky-50 p-6 rounded-2xl border-2 border-sky-200">
+                <h2 class="text-2xl font-extrabold text-sky-800 mb-1">🎉 TAHNIAH / SYABAS!</h2>
+                <p id="result-user-info" class="text-slate-600 font-semibold text-lg mb-4">Nama (Kelas)</p>
+
+                <div class="text-5xl font-black text-sky-600 mb-2" id="score-text">0 / 30</div>
+                <p id="score-percentage" class="text-xl font-bold text-slate-700">Peratusan: 0%</p>
+                <p id="score-status" class="mt-2 text-sm font-bold"></p>
+            </div>
+
+            <!-- Butang Tindakan -->
+            <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                <button id="btn-cert" onclick="openCertificate()" class="hidden py-3 px-6 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-lg rounded-xl shadow-md transition-all">
+                    📜 Jana Sijil Penghargaan
+                </button>
+                <button onclick="restartQuiz()" class="py-3 px-6 bg-sky-500 hover:bg-sky-600 text-white font-extrabold text-lg rounded-xl shadow-md transition-all">
+                    🔄 Cuba Lagi
+                </button>
+                <button onclick="goMenu()" class="py-3 px-6 bg-slate-600 hover:bg-slate-700 text-white font-extrabold text-lg rounded-xl shadow-md transition-all">
+                    🏠 Kembali ke Menu
+                </button>
+            </div>
+
+            <!-- Semakan Jawapan Penuh -->
+            <div class="text-left mt-8">
+                <h3 class="text-xl font-extrabold text-slate-800 mb-4 border-b-2 pb-2">🔍 Semakan Jawapan Penuh:</h3>
+                <div id="review-container" class="space-y-4 max-h-96 overflow-y-auto pr-2">
+                    <!-- Senarai semakan dijana JS -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL SIJIL PENGHARGAAN (DENGAN REKABENTUK PINTAS PRINT & PDF) -->
+    <div id="certificate-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="cert-box bg-white text-slate-800 p-8 sm:p-12 rounded-3xl max-w-3xl w-full border-8 border-amber-400 shadow-2xl relative text-center">
+            
+            <!-- Hiasan Sudut -->
+            <div class="absolute top-3 left-3 text-3xl">🚀</div>
+            <div class="absolute top-3 right-3 text-3xl">🪐</div>
+            <div class="absolute bottom-3 left-3 text-3xl">🧪</div>
+            <div class="absolute bottom-3 right-3 text-3xl">⚙️</div>
+
+            <div class="border-4 border-dashed border-sky-300 p-6 sm:p-10 rounded-2xl">
+                <h2 class="text-3xl sm:text-4xl font-black text-sky-700 tracking-wider uppercase mb-1">SIJIL PENGHARGAAN</h2>
+                <p class="text-slate-500 font-bold uppercase tracking-widest text-sm mb-6">Ulangkaji Sains Tahun 3</p>
+
+                <p class="text-slate-600 text-lg">Dengan ini diperakukan bahawa:</p>
+                <h3 id="cert-name" class="text-2xl sm:text-4xl font-extrabold text-amber-600 my-2 underline decoration-sky-400">NAMA MURID</h3>
+                <p id="cert-class" class="text-slate-700 font-bold text-xl mb-6">Kelas: -</p>
+
+                <p class="text-slate-600 text-base sm:text-lg max-w-lg mx-auto">
+                    Telah berjaya menyempurnakan Kuiz Interaktif Topik Ketumpatan, Asid & Alkali, Sistem Suria, dan Takal dengan keputusan:
+                </p>
+
+                <div class="my-6 inline-block bg-sky-100 border-2 border-sky-300 px-6 py-2 rounded-2xl">
+                    <span id="cert-score" class="text-2xl sm:text-3xl font-black text-sky-800">Skor: 30/30 (100%)</span>
+                </div>
+
+                <div class="flex justify-between items-end mt-8 pt-6 border-t-2 border-slate-200 text-sm font-semibold text-slate-500">
+                    <div>
+                        <p>Tarikh: <span id="cert-date">-</span></p>
+                        <p class="text-xs text-slate-400">Pencapaian Sah Online</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-16 h-16 mx-auto bg-amber-400 text-white rounded-full flex items-center justify-center font-bold text-xs shadow-inner mb-1">
+                            LULUS<br>EXCELLENT
+                        </div>
+                        <p class="text-xs font-bold text-slate-600">Sains Tahun 3</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Butang Cetak & Tutup (Akan disembunyikan secara automatik semasa Cetak/Save PDF) -->
+            <div class="mt-6 flex flex-wrap gap-3 justify-center no-print">
+                <button onclick="printCertificate()" class="py-3 px-8 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-lg rounded-xl shadow-lg transition-all flex items-center gap-2">
+                    🖨️ Cetak / Simpan PDF
+                </button>
+                <button onclick="closeCertificate()" class="py-3 px-6 bg-slate-500 hover:bg-slate-600 text-white font-bold text-lg rounded-xl transition-all">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIK KUIZ & AUDIOWEB -->
+    <script>
+        // ========================================================
+        // BANK SOALAN (30 SOALAN - 4 TOPIK SAINS TAHUN 3)
+        // ========================================================
+        const bankSoalan = [
+            // TOPIK 1: KETUMPATAN
+            { kategory: "Ketumpatan", soalan: "Objek yang ____________ akan tenggelam di dalam air.", pilihan: ["Lebih tumpat daripada air", "Kurang tumpat daripada air", "Sama tumpat dengan air", "Ringan daripada air"], jawapanBetul: 0 },
+            { kategory: "Ketumpatan", soalan: "Antara berikut, bahan manakah yang TIMBUL di permukaan air?", pilihan: ["Guli kaca", "Paku besi", "Gabus", "Batu"], jawapanBetul: 2 },
+            { kategory: "Ketumpatan", soalan: "Buah epal timbul di atas air kerana epal adalah...", pilihan: ["Lebih tumpat daripada air", "Kurang tumpat daripada air", "Sangat berat", "Menyerap air"], jawapanBetul: 1 },
+            { kategory: "Ketumpatan", soalan: "Bagaimanakah cara untuk menjadikan air garam lebih tumpat daripada telur?", pilihan: ["Menambah lebih banyak air", "Menambah lebih banyak garam", "Memanaskan air", "Mensejukkan air"], jawapanBetul: 1 },
+            { kategory: "Ketumpatan", soalan: "Antara cecair berikut, yang manakah berada di lapisan PALING BAWAH kerana paling tumpat?", pilihan: ["Minyak masak", "Air paip", "Madu", "Minyak petrol"], jawapanBetul: 2 },
+            { kategory: "Ketumpatan", soalan: "Sebiji batu tenggelam dalam air kerana batu tersebut...", pilihan: ["Lebih tumpat daripada air", "Kurang tumpat daripada air", "Bentuknya bulat", "Warnanya gelap"], jawapanBetul: 0 },
+            { kategory: "Ketumpatan", soalan: "Minyak masak timbul di atas air. Ini membuktikan minyak masak...", pilihan: ["Lebih tumpat daripada air", "Kurang tumpat daripada air", "Sama ketumpatan", "Tidak mempunyai ketumpatan"], jawapanBetul: 1 },
+            { kategory: "Ketumpatan", soalan: "Apakah yang berlaku kepada kapal selam apabila tangki balast diisi air?", pilihan: ["Kapal selam menjadi kurang tumpat dan timbul", "Kapal selam menjadi lebih tumpat dan tenggelam", "Kapal selam terapung di atas air", "Kapal selam terbang"], jawapanBetul: 1 },
+
+            // TOPIK 2: ASID DAN ALKALI
+            { kategory: "Asid & Alkali", soalan: "Bahan yang berasid bertukar warna kertas litmus biru kepada...", pilihan: ["Merah", "Kuning", "Hijau", "Ungu"], jawapanBetul: 0 },
+            { kategory: "Asid & Alkali", soalan: "Kertas litmus merah bertukar menjadi BIRU apabila diuji dengan bahan...", pilihan: ["Berasid", "Beralkali", "Neutral", "Manis"], jawapanBetul: 1 },
+            { kategory: "Asid & Alkali", soalan: "Bahan manakah yang mempunyai rasa PAHIT dan rasa LICIN apabila disentuh?", pilihan: ["Jus lemon", "Air garam", "Sabun", "Cuka"], jawapanBetul: 2 },
+            { kategory: "Asid & Alkali", soalan: "Apakah rasa lazim bagi bahan yang berasid?", pilihan: ["Masam", "Pahit", "Masin", "Tawar"], jawapanBetul: 0 },
+            { kategory: "Asid & Alkali", soalan: "Bahan neutral tidak mengubah warna kertas litmus merah dan biru. Antara berikut yang manakah NEUTRAL?", pilihan: ["Jus limau nipis", "Air mineral / Air tulen", "Mangga muda", "Ubat gigi"], jawapanBetul: 1 },
+            { kategory: "Asid & Alkali", soalan: "Cuka menukarkan warna kertas litmus biru kepada merah. Ini bermakna cuka bersifat...", pilihan: ["Alkali", "Neutral", "Asid", "Manis"], jawapanBetul: 2 },
+            { kategory: "Asid & Alkali", soalan: "Apakah fungsi utama Kertas Litmus?", pilihan: ["Mengukur suhu bahan", "Menguji sifat asid, alkali atau neutral bahan", "Mengukur ketumpatan cecair", "Mengira berat bahan"], jawapanBetul: 1 },
+            { kategory: "Asid & Alkali", soalan: "Antara berikut, yang manakah bersifat ALKALI?", pilihan: ["Ubat gigi dan Sabun", "Jus Oren dan Cuka", "Air Gula dan Air Garam", "Kicap dan Sos Tomat"], jawapanBetul: 0 },
+
+            // TOPIK 3: SISTEM SURIA
+            { kategory: "Sistem Suria", soalan: "Apakah pusat bagi Sistem Suria kita?", pilihan: ["Bumi", "Matahari", "Bulan", "Okey"], jawapanBetul: 1 },
+            { kategory: "Sistem Suria", soalan: "Planet yang PALING DEKAT dengan Matahari ialah...", pilihan: ["Zuhrah", "Utarid", "Bumi", "Marikh"], jawapanBetul: 1 },
+            { kategory: "Sistem Suria", soalan: "Planet manakah yang dikenali sebagai 'Planet Merah'?", pilihan: ["Marikh", "Utarid", "Zuhal", "Neptun"], jawapanBetul: 0 },
+            { kategory: "Sistem Suria", soalan: "Planet manakah yang mempunyai gelang yang indah di sekelilingnya?", pilihan: ["Musytari", "Zuhal", "Uranius", "Bumi"], jawapanBetul: 1 },
+            { kategory: "Sistem Suria", soalan: "Apakah planet TERBESAR dalam Sistem Suria?", pilihan: ["Zuhal", "Neptun", "Musytari", "Bumi"], jawapanBetul: 2 },
+            { kategory: "Sistem Suria", soalan: "Urutan planet ketiga dari Matahari yang mempunyai hidupan ialah...", pilihan: ["Zuhrah", "Utarid", "Bumi", "Marikh"], jawapanBetul: 2 },
+            { kategory: "Sistem Suria", soalan: "Planet yang PALING SEJUK dan Paling Jauh dari Matahari ialah...", pilihan: ["Neptun", "Utarid", "Marikh", "Musytari"], jawapanBetul: 0 },
+            { kategory: "Sistem Suria", soalan: "Laluan bayangan berbentuk bujur yang dilalui oleh planet mengelilingi Matahari dipanggil...", pilihan: ["Paksi", "Orbit", "Roda", "Garisan"], jawapanBetul: 1 },
+            { kategory: "Sistem Suria", soalan: "Objek semula jadi yang beredar mengelilingi sesebuah planet dipanggil...", pilihan: ["Satelit semula jadi / Bulan", "Komet", "Asteroid", "Bintang"], jawapanBetul: 0 },
+
+            // TOPIK 4: TAKAL
+            { kategory: "Takal", soalan: "Apakah fungsi utama Mesin Ringkas TAKAL?", pilihan: ["Memotong bahan tebal", "Memudahkan kerja mengangkat beban", "Menyukat cecair", "Menjana elektrik"], jawapanBetul: 1 },
+            { kategory: "Takal", soalan: "Komponen utama takal terdiri daripada roda yang mempunyai...", pilihan: ["Alur dan tali", "Gigi dan rantai", "Paku dan skru", "Bilah dan gandar"], jawapanBetul: 0 },
+            { kategory: "Takal", soalan: "Antara alat berikut, yang manakah MENGGUNAKAN sistem takal?", pilihan: ["Tiang bendera", "Pisau dapur", "Pembaris", "Gunting"], jawapanBetul: 0 },
+            { kategory: "Takal", soalan: "Bagaimanakah takal membantu memudahkan kerja kita?", pilihan: ["Mengubah arah daya dan mengurangkan tenaga", "Menambah berat beban", "Melambat kerja", "Menghentikan pergerakan"], jawapanBetul: 0 },
+            { kategory: "Takal", soalan: "Selain tiang bendera, aplikasi takal juga boleh dilihat pada...", pilihan: ["Kren pembinaan", "Kereta mainan wind-up", "Kipas angin", "Pintu bilik"], jawapanBetul: 0 }
+        ];
+
+        // VARIABEL KEADAAN (STATE)
+        let currentQuestions = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let timer = null;
+        let timeLeft = 30;
+        let userAnswers = []; // Menyimpan rekod jawapan murid
+        let userName = "";
+        let userClass = "";
+
+        // ========================================================
+        // UTILITI AUDIO (Web Audio API - Tanpa Fail Luaran)
+        // ========================================================
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            if (type === 'correct') {
+                // Bunyi gembira / sorakan pendek
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+                osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.3); // A5
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+            } else if (type === 'wrong') {
+                // Bunyi salah / Buzz
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+                osc.frequency.linearRampToValueAtTime(110, audioCtx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+            } else if (type === 'tick') {
+                // Bunyi pemasa
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.05);
+            }
+        }
+
+        // FUNSI ACAK (SHUFFLE)
+        function shuffleArray(array) {
+            let arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        // VALIDASI INPUT NAMA & KELAS
+        function validateInput() {
+            const nameVal = document.getElementById('user-name').value.trim();
+            const classVal = document.getElementById('user-class').value.trim();
+            const btnStart = document.getElementById('btn-start');
+
+            if (nameVal !== "" && classVal !== "") {
+                btnStart.disabled = false;
+                btnStart.classList.remove('bg-slate-300', 'text-slate-500', 'cursor-not-allowed');
+                btnStart.classList.add('bg-emerald-500', 'hover:bg-emerald-600', 'text-white', 'cursor-pointer');
+            } else {
+                btnStart.disabled = true;
+                btnStart.classList.add('bg-slate-300', 'text-slate-500', 'cursor-not-allowed');
+                btnStart.classList.remove('bg-emerald-500', 'hover:bg-emerald-600', 'text-white', 'cursor-pointer');
+            }
+        }
+
+        // MULA KUIZ
+        function startQuiz() {
+            userName = document.getElementById('user-name').value.trim();
+            userClass = document.getElementById('user-class').value.trim();
+
+            // Acak soalan dan pilihan jawapan
+            currentQuestions = shuffleArray(bankSoalan).map(q => {
+                const originalCorrectText = q.pilihan[q.jawapanBetul];
+                const shuffledOptions = shuffleArray(q.pilihan);
+                const newCorrectIndex = shuffledOptions.indexOf(originalCorrectText);
+                return {
+                    ...q,
+                    pilihan: shuffledOptions,
+                    jawapanBetul: newCorrectIndex
+                };
+            });
+
+            currentQuestionIndex = 0;
+            score = 0;
+            userAnswers = [];
+
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('quiz-screen').classList.remove('hidden');
+
+            loadQuestion();
+        }
+
+        // PAPAR SOALAN
+        function loadQuestion() {
+            clearInterval(timer);
+            timeLeft = 30;
+            updateTimerUI();
+
+            const q = currentQuestions[currentQuestionIndex];
+
+            // Update UI
+            document.getElementById('progress-text').innerText = `Soalan ${currentQuestionIndex + 1} / ${currentQuestions.length}`;
+            document.getElementById('progress-bar').style.width = `${((currentQuestionIndex + 1) / currentQuestions.length) * 100}%`;
+            document.getElementById('question-category').innerText = q.kategory;
+            document.getElementById('question-text').innerText = q.soalan;
+
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+            document.getElementById('feedback-message').classList.add('hidden');
+
+            // Cipta Butang Pilihan
+            q.pilihan.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-4 rounded-xl border-2 border-slate-200 bg-slate-50 hover:bg-sky-100 hover:border-sky-400 font-bold text-slate-700 transition-all text-base sm:text-lg flex items-center justify-between";
+                btn.onclick = () => checkAnswer(idx);
+                btn.innerHTML = `<span>${String.fromCharCode(65 + idx)}. ${opt}</span>`;
+                optionsContainer.appendChild(btn);
+            });
+
+            // Mulakan Pemasa
+            timer = setInterval(() => {
+                timeLeft--;
+                updateTimerUI();
+                if (timeLeft <= 5 && timeLeft > 0) {
+                    playSound('tick');
+                }
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    checkAnswer(-1); // Masa Tamat
+                }
+            }, 1000);
+        }
+
+        // KEMAS KINI PAPARAN PEMASA
+        function updateTimerUI() {
+            const timerBox = document.getElementById('timer-box');
+            const timerText = document.getElementById('timer-text');
+            timerText.innerText = `${timeLeft}s`;
+
+            if (timeLeft <= 5) {
+                timerBox.className = "flex items-center space-x-1 px-4 py-1.5 rounded-full bg-red-500 text-white font-bold text-lg animate-pulse";
+            } else {
+                timerBox.className = "flex items-center space-x-1 px-4 py-1.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-lg transition-colors";
+            }
+        }
+
+        // SEMAK JAWAPAN
+        function checkAnswer(selectedIndex) {
+            clearInterval(timer);
+            const q = currentQuestions[currentQuestionIndex];
+            const isCorrect = (selectedIndex === q.jawapanBetul);
+            const optionsBtns = document.getElementById('options-container').children;
+
+            // Nyahaktifkan semua butang
+            for (let btn of optionsBtns) {
+                btn.disabled = true;
+                btn.classList.add('cursor-not-allowed');
+            }
+
+            // Rekodkan Jawapan
+            userAnswers.push({
+                soalan: q.soalan,
+                jawapanPilihan: selectedIndex >= 0 ? q.pilihan[selectedIndex] : "Masa Tamat ⏱️",
+                jawapanSebenar: q.pilihan[q.jawapanBetul],
+                betul: isCorrect
+            });
+
+            const mainCard = document.querySelector('main');
+
+            if (isCorrect) {
+                score++;
+                playSound('correct');
+                confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
+                if (selectedIndex >= 0) {
+                    optionsBtns[selectedIndex].classList.remove('bg-slate-50', 'border-slate-200');
+                    optionsBtns[selectedIndex].classList.add('bg-emerald-500', 'text-white', 'border-emerald-600');
+                }
+            } else {
+                playSound('wrong');
+                // Gegaran skrin
+                mainCard.classList.add('shake-animation');
+                setTimeout(() => mainCard.classList.remove('shake-animation'), 400);
+
+                if (selectedIndex >= 0) {
+                    optionsBtns[selectedIndex].classList.remove('bg-slate-50', 'border-slate-200');
+                    optionsBtns[selectedIndex].classList.add('bg-red-500', 'text-white', 'border-red-600');
+                }
+                // Tunjukkan jawapan betul
+                optionsBtns[q.jawapanBetul].classList.remove('bg-slate-50', 'border-slate-200');
+                optionsBtns[q.jawapanBetul].classList.add('bg-emerald-100', 'text-emerald-800', 'border-emerald-400', 'font-extrabold');
+            }
+
+            // Sambung ke soalan seterusnya selepas 1.5 saat
+            setTimeout(() => {
+                currentQuestionIndex++;
+                if (currentQuestionIndex < currentQuestions.length) {
+                    loadQuestion();
+                } else {
+                    showResults();
+                }
+            }, 1500);
+        }
+
+        // PAPAR KEPUTUSAN
+        function showResults() {
+            document.getElementById('quiz-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.remove('hidden');
+
+            const total = currentQuestions.length;
+            const percentage = Math.round((score / total) * 100);
+
+            document.getElementById('result-user-info').innerText = `${userName} (${userClass})`;
+            document.getElementById('score-text').innerText = `${score} / ${total}`;
+            document.getElementById('score-percentage').innerText = `Peratusan: ${percentage}%`;
+
+            const btnCert = document.getElementById('btn-cert');
+            const scoreStatus = document.getElementById('score-status');
+
+            // Ambang Lulus >= 60%
+            if (percentage >= 60) {
+                btnCert.classList.remove('hidden');
+                scoreStatus.innerText = "🎉 TAHNIAH! Anda LULUS dan layak menerima Sijil!";
+                scoreStatus.className = "mt-2 text-base font-bold text-emerald-600";
+                confetti({ particleCount: 100, spread: 100, origin: { y: 0.5 } });
+            } else {
+                btnCert.classList.add('hidden');
+                scoreStatus.innerText = "💪 Jangan putus asa! Cuba lagi untuk dapatkan Sijil (Minimum 60%).";
+                scoreStatus.className = "mt-2 text-base font-bold text-amber-600";
+            }
+
+            // Simpan Rekod dalam LocalStorage
+            saveRecord(userName, userClass, score, total, percentage);
+
+            // Cipta Senarai Semakan Jawapan Penuh
+            const reviewContainer = document.getElementById('review-container');
+            reviewContainer.innerHTML = '';
+
+            userAnswers.forEach((ans, idx) => {
+                const item = document.createElement('div');
+                item.className = `p-4 rounded-xl border-2 text-sm ${ans.betul ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`;
+                item.innerHTML = `
+                    <p class="font-bold text-slate-800 mb-1">${idx + 1}. ${ans.soalan}</p>
+                    <p class="${ans.betul ? 'text-emerald-700' : 'text-red-700'} font-semibold">
+                        Jawapan Anda: ${ans.jawapanPilihan} ${ans.betul ? '✅' : '❌'}
+                    </p>
+                    ${!ans.betul ? `<p class="text-slate-600 font-medium mt-0.5">Jawapan Sebenar: <b class="text-emerald-700">${ans.jawapanSebenar}</b></p>` : ''}
+                `;
+                reviewContainer.appendChild(item);
+            });
+        }
+
+        // SIMPAN REKOD
+        function saveRecord(nama, kelas, skor, jumlah, peratus) {
+            const newRecord = {
+                nama,
+                kelas,
+                skor,
+                jumlah,
+                peratus,
+                tarikh: new Date().toLocaleDateString('ms-MY')
+            };
+            let records = JSON.parse(localStorage.getItem('rekod_kuiz_sains') || '[]');
+            records.push(newRecord);
+            localStorage.setItem('rekod_kuiz_sains', JSON.stringify(records));
+        }
+
+        // BUKA MODAL SIJIL
+        function openCertificate() {
+            document.getElementById('cert-name').innerText = userName.toUpperCase();
+            document.getElementById('cert-class').innerText = `Kelas: ${userClass}`;
+            document.getElementById('cert-score').innerText = `Skor: ${score}/${currentQuestions.length} (${Math.round((score/currentQuestions.length)*100)}%)`;
+            document.getElementById('cert-date').innerText = new Date().toLocaleDateString('ms-MY');
+
+            document.getElementById('certificate-modal').classList.remove('hidden');
+        }
+
+        // TUTUP MODAL SIJIL
+        function closeCertificate() {
+            document.getElementById('certificate-modal').classList.add('hidden');
+        }
+
+        // CETAK ATAU SAVE PDF SIJIL (FUNGSI UTAMA DENGAN PERBAIKAN)
+        function printCertificate() {
+            window.print();
+        }
+
+        // SEMULA / MENU
+        function restartQuiz() {
+            document.getElementById('result-screen').classList.add('hidden');
+            startQuiz();
+        }
+
+        function goMenu() {
+            document.getElementById('result-screen').classList.add('hidden');
+            document.getElementById('start-screen').classList.remove('hidden');
+            document.getElementById('user-form').reset();
+            validateInput();
+        }
+    </script>
+</body>
+</html>
